@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Parking History - ParkVoice AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <div class="card-header" style="margin-bottom: 1.5rem;">
+    <div>
+      <h1 class="card-title" style="font-size: 1.5rem;">Parking History & Logs</h1>
+      <p class="card-subtitle">Chronological ledger of past parking sessions, fees, and timestamps</p>
+    </div>
+  </div>
+
+  <!-- Filter Pills -->
+  <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <button class="btn btn-secondary btn-sm active" id="btnHistAll" onclick="fetchHistory('all')">All Records</button>
+    <button class="btn btn-secondary btn-sm" id="btnHistToday" onclick="fetchHistory('today')">Today</button>
+    <button class="btn btn-secondary btn-sm" id="btnHistWeek" onclick="fetchHistory('week')">This Week</button>
+    <button class="btn btn-secondary btn-sm" id="btnHistMonth" onclick="fetchHistory('month')">This Month</button>
+  </div>
+
+  <!-- History Table -->
+  <div class="card">
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Booking Ref</th>
+            <th>Slot</th>
+            <th>Vehicle</th>
+            <th>Check-In</th>
+            <th>Check-Out</th>
+            <th>Duration</th>
+            <th>Total Fee</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody">
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 3rem;">
+              Loading parking records...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  fetchHistory('all');
+});
+
+async function fetchHistory(filter) {
+  // Update active pill
+  document.querySelectorAll("[id^='btnHist']").forEach(b => b.classList.remove("active"));
+  if (filter === 'all') document.getElementById("btnHistAll").classList.add("active");
+  if (filter === 'today') document.getElementById("btnHistToday").classList.add("active");
+  if (filter === 'week') document.getElementById("btnHistWeek").classList.add("active");
+  if (filter === 'month') document.getElementById("btnHistMonth").classList.add("active");
+
+  const tbody = document.getElementById("historyTableBody");
+  try {
+    const res = await fetch(`/api/history?filter=${filter}`);
+    const data = await res.json();
+
+    if (!data.success || data.history.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 3rem;">
+            No parking history found for this timeframe.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = data.history.map(item => {
+      let statusBadge = "badge-available";
+      if (item.status === 'COMPLETED') statusBadge = "badge-available";
+      if (item.status === 'CANCELLED') statusBadge = "badge-occupied";
+      if (item.status === 'ACTIVE') statusBadge = "badge-reserved";
+
+      const durationText = item.duration_minutes ? `${item.duration_minutes} min` : '--';
+      const checkoutText = item.end_time || (item.status === 'ACTIVE' ? '<span style="color: #fbbf24;">In Session</span>' : '--');
+
+      return `
+        <tr>
+          <td><code style="color: #a5b4fc; font-weight: 700;">${item.booking_code}</code></td>
+          <td>
+            <strong>${item.slot_number}</strong>
+            ${item.has_ev_charger ? '<span class="ev-tag" style="margin-left: 4px;">⚡</span>' : ''}
+          </td>
+          <td>
+            <div style="font-weight: 600;">${item.plate_number}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">${item.model} (${item.vehicle_type})</div>
+          </td>
+          <td>${item.start_time || '--'}</td>
+          <td>${checkoutText}</td>
+          <td>${durationText}</td>
+          <td><strong>$${item.fee_paid ? item.fee_paid.toFixed(2) : item.total_amount.toFixed(2)}</strong></td>
+          <td><span class="slot-badge ${statusBadge}">${item.status}</span></td>
+        </tr>
+      `;
+    }).join("");
+
+  } catch (err) {
+    console.error("Error fetching history:", err);
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; color: #f87171; padding: 2rem;">
+          Failed to load history records.
+        </td>
+      </tr>
+    `;
+  }
+}
+</script>
+{% endblock %}

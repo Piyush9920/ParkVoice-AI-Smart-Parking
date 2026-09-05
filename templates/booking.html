@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Slot Booking - ParkVoice AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <div class="card-header" style="margin-bottom: 1.5rem;">
+    <div>
+      <h1 class="card-title" style="font-size: 1.5rem;">Parking Slot Reservations</h1>
+      <p class="card-subtitle">Browse all 12 slots, check real-time availability, or book manually</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+      <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-sm">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M12 15c1.66 0 2.99-1.34 2.99-3L15 6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3z"/>
+        </svg>
+        Voice Booking Mode
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter Pills -->
+  <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <button class="btn btn-secondary btn-sm active" id="filterAll" onclick="filterSlots('ALL')">All Slots (12)</button>
+    <button class="btn btn-secondary btn-sm" id="filterAvailable" onclick="filterSlots('AVAILABLE')">Available Only</button>
+    <button class="btn btn-secondary btn-sm" id="filterEV" onclick="filterSlots('EV')">EV Equipped Only</button>
+    <button class="btn btn-secondary btn-sm" id="filterStandard" onclick="filterSlots('Standard')">Standard Bays</button>
+  </div>
+
+  <!-- Slots Table & Cards -->
+  <div class="card">
+    <div class="table-responsive">
+      <table class="custom-table" id="bookingSlotsTable">
+        <thead>
+          <tr>
+            <th>Slot</th>
+            <th>Type</th>
+            <th>EV Charging</th>
+            <th>Grid Location</th>
+            <th>Hourly Rate</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="bookingSlotsBody">
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+              Loading slot directory...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Manual Booking Confirmation Modal -->
+<div id="confirmBookingModal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="confirmModalTitle" class="card-title">Confirm Reservation</h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="closeConfirmModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+        You are reserving <strong id="confirmSlotTag" style="color: var(--text-primary); font-size: 1.1rem;">P01</strong>.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label" for="bookingVehicleSelect">Select Vehicle</label>
+        <select id="bookingVehicleSelect" class="form-control form-select">
+          <option value="">Loading vehicles...</option>
+        </select>
+      </div>
+
+      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.75rem 1rem; font-size: 0.85rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+          <span>Hourly Rate:</span>
+          <span id="confirmRate" style="font-weight: 600; color: var(--text-primary);">$5.00/hr</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>Double-Booking Protection:</span>
+          <span style="color: #34d399; font-weight: 600;">Active (Atomic Lock)</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button type="button" id="btnExecuteBooking" class="btn btn-primary">Confirm & Reserve</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allSlotsData = [];
+let currentFilter = 'ALL';
+let targetSlotForBooking = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadSlotsTable();
+  loadUserVehicles();
+});
+
+async function loadSlotsTable() {
+  try {
+    const res = await fetch("/api/parking/slots");
+    const data = await res.json();
+    if (data.success) {
+      allSlotsData = data.slots;
+      renderSlotsTable();
+    }
+  } catch (err) {
+    console.error("Error loading slots:", err);
+  }
+}
+
+async function loadUserVehicles() {
+  try {
+    const res = await fetch("/api/vehicles");
+    const data = await res.json();
+    const select = document.getElementById("bookingVehicleSelect");
+    if (data.success && data.vehicles.length > 0) {
+      select.innerHTML = data.vehicles.map(v => 
+        `<option value="${v.id}" ${v.is_default ? 'selected' : ''}>${v.plate_number} (${v.vehicle_type} - ${v.model})</option>`
+      ).join("");
+    } else {
+      select.innerHTML = `<option value="">No vehicles found - please add one in Garage</option>`;
+    }
+  } catch (err) {
+    console.error("Error loading vehicles:", err);
+  }
+}
+
+function filterSlots(filter) {
+  currentFilter = filter;
+  document.querySelectorAll("[id^='filter']").forEach(b => b.classList.remove("active"));
+  if (filter === 'ALL') document.getElementById("filterAll").classList.add("active");
+  if (filter === 'AVAILABLE') document.getElementById("filterAvailable").classList.add("active");
+  if (filter === 'EV') document.getElementById("filterEV").classList.add("active");
+  if (filter === 'Standard') document.getElementById("filterStandard").classList.add("active");
+  renderSlotsTable();
+}
+
+function renderSlotsTable() {
+  const tbody = document.getElementById("bookingSlotsBody");
+  let filtered = allSlotsData;
+
+  if (currentFilter === 'AVAILABLE') {
+    filtered = filtered.filter(s => s.status === 'AVAILABLE');
+  } else if (currentFilter === 'EV') {
+    filtered = filtered.filter(s => s.has_ev_charger);
+  } else if (currentFilter === 'Standard') {
+    filtered = filtered.filter(s => s.slot_type === 'Standard');
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No slots match the selected filter.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(s => {
+    let badgeClass = 'badge-available';
+    if (s.status === 'OCCUPIED') badgeClass = 'badge-occupied';
+    if (s.status === 'RESERVED') badgeClass = 'badge-reserved';
+
+    const evPill = s.has_ev_charger 
+      ? `<span class="ev-tag">⚡ EV FAST CHARGE</span>` 
+      : `<span style="color: var(--text-muted); font-size: 0.8rem;">None</span>`;
+
+    const actionBtn = s.status === 'AVAILABLE'
+      ? `<button class="btn btn-primary btn-sm" onclick="openConfirmModal('${s.slot_number}', ${s.id}, ${s.price_per_hour})">Reserve Slot</button>`
+      : `<button class="btn btn-secondary btn-sm" disabled style="opacity: 0.5;">Unavailable</button>`;
+
+    return `
+      <tr>
+        <td><strong style="font-size: 1.05rem; letter-spacing: 0.02em;">${s.slot_number}</strong></td>
+        <td>${s.slot_type}</td>
+        <td>${evPill}</td>
+        <td>Row ${s.row_index + 1}, Col ${s.col_index + 1}</td>
+        <td>$${s.price_per_hour.toFixed(2)}/hr</td>
+        <td><span class="slot-badge ${badgeClass}">${s.status}</span></td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function openConfirmModal(slotNumber, slotId, price) {
+  targetSlotForBooking = { slotNumber, slotId, price };
+  document.getElementById("confirmSlotTag").innerText = slotNumber;
+  document.getElementById("confirmRate").innerText = `$${price.toFixed(2)}/hr`;
+  document.getElementById("confirmBookingModal").style.display = "flex";
+}
+
+function closeConfirmModal() {
+  document.getElementById("confirmBookingModal").style.display = "none";
+  targetSlotForBooking = null;
+}
+
+document.getElementById("btnExecuteBooking").addEventListener("click", async () => {
+  if (!targetSlotForBooking) return;
+  const vehicleId = document.getElementById("bookingVehicleSelect").value;
+  if (!vehicleId) {
+    alert("Please select a vehicle from your garage first.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/bookings/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slot_id: targetSlotForBooking.slotId,
+        vehicle_id: parseInt(vehicleId)
+      })
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      alert(`Booking Confirmed!\nCode: ${result.booking.booking_code}\nSlot: ${result.booking.slot_number}`);
+      closeConfirmModal();
+      window.location.href = "/dashboard";
+    } else {
+      alert(`Booking Error: ${result.error || 'Failed to book slot'}`);
+      loadSlotsTable();
+    }
+  } catch (err) {
+    alert("Network error: Could not complete booking.");
+  }
+});
+</script>
+{% endblock %}

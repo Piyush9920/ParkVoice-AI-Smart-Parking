@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}ParkVoice AI - Smart Voice Parking & A* Navigation{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 2rem auto; text-align: center;">
+  <!-- Hero Section -->
+  <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-full); padding: 0.4rem 1.2rem; font-size: 0.85rem; color: #a5b4fc; margin-bottom: 1.5rem;">
+    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+    AI-POWERED VOICE-CONTROLLED SMART PARKING & NAVIGATION
+  </div>
+
+  <h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.15; margin-bottom: 1.2rem; background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+    Speak to Park. Navigate with A* Precision.
+  </h1>
+
+  <p style="font-size: 1.15rem; color: var(--text-secondary); max-width: 780px; margin: 0 auto 2.2rem; line-height: 1.6;">
+    An autonomous smart parking system integrating continuous <strong>Web Speech API</strong> voice control,
+    real <strong>A* pathfinding</strong> with Manhattan heuristic over a 4x3 grid, EV compatibility optimization,
+    and atomic MySQL double-booking prevention.
+  </p>
+
+  <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 3.5rem;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="padding: 0.85rem 2rem; font-size: 1rem;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <path d="M12 15c1.66 0 2.99-1.34 2.99-3L15 6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 15 6.7 12H5c0 3.42 2.72 6.23 6 6.72V22h2v-3.28c3.28-.49 6-3.3 6-6.72h-1.7z"/>
+      </svg>
+      Launch Voice Dashboard
+    </a>
+    <a href="{{ url_for('admin_login') }}" class="btn btn-secondary" style="padding: 0.85rem 1.8rem; font-size: 1rem;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5zm4 4h-2v-6h2v6z"/>
+      </svg>
+      Admin & Live Simulation
+    </a>
+  </div>
+
+  <!-- Quick Demo Credentials Callout -->
+  <div style="background: rgba(30, 41, 59, 0.4); border: 1px dashed var(--border-glow); border-radius: var(--radius-md); padding: 1.25rem 2rem; max-width: 750px; margin: 0 auto 3.5rem; text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <div style="font-weight: 700; color: #a5b4fc; font-size: 0.95rem; margin-bottom: 0.25rem;">Quick Evaluation Credentials</div>
+      <div style="font-size: 0.85rem; color: var(--text-secondary);">
+        User: <code style="color: #67e8f9;">demo@parkvoice.ai</code> / <code style="color: #67e8f9;">User@123</code> &bull;
+        Admin: <code style="color: #f472b6;">admin</code> / <code style="color: #f472b6;">Admin@123</code>
+      </div>
+    </div>
+    <div>
+      <a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">One-Click Login</a>
+    </div>
+  </div>
+
+  <!-- System Feature Highlights -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; text-align: left;">
+    <div class="card">
+      <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(99, 102, 241, 0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; color: #818cf8;">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
+        </svg>
+      </div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Web Speech API Voice Engine</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+        Multi-turn voice recognition with intent parser for 9 commands: <em>"Find parking"</em>, <em>"Book the recommended slot"</em>, <em>"Book P07"</em>, <em>"Cancel my booking"</em>, with voice responses via SpeechSynthesis.
+      </p>
+    </div>
+
+    <div class="card">
+      <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(168, 85, 247, 0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; color: #c084fc;">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+          <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+        </svg>
+      </div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Real A* Shortest Path</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+        True \(f(n) = g(n) + h(n)\) pathfinding with Manhattan distance heuristic. Computes exact step distance from the entrance gate, navigates around occupied bays, and dynamically renders purple routes.
+      </p>
+    </div>
+
+    <div class="card">
+      <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; color: #34d399;">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/>
+        </svg>
+      </div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Atomic Concurrency & EV Matching</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+        Transaction-locked database queries prevent double bookings. Smart recommendation weights vehicle types (Car, SUV, Bike, EV) to assign dedicated EV chargers and compact spots.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

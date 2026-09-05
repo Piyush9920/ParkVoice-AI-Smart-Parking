@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}My Garage - ParkVoice AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+  <div class="card-header" style="margin-bottom: 1.5rem;">
+    <div>
+      <h1 class="card-title" style="font-size: 1.5rem;">My Vehicle Garage</h1>
+      <p class="card-subtitle">Manage your registered vehicles. The AI recommendation engine automatically optimizes parking spots for your active vehicle.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openAddVehicleModal()">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+      Add Vehicle
+    </button>
+  </div>
+
+  <!-- Vehicles Grid -->
+  <div id="vehiclesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem;">
+    <div style="grid-column: span 3; text-align: center; color: var(--text-secondary); padding: 3rem;">
+      Loading garage...
+    </div>
+  </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div id="addVehicleModal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="card-title">Add Vehicle to Garage</h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="closeAddVehicleModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="newPlate">License Plate *</label>
+        <input type="text" id="newPlate" class="form-control" placeholder="e.g. MH 12 AB 1234" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="newType">Vehicle Category *</label>
+        <select id="newType" class="form-control form-select">
+          <option value="Car">Car (Sedan / Hatchback)</option>
+          <option value="SUV">SUV (Full Size)</option>
+          <option value="EV">EV (Electric Vehicle - Fast Charging Priority)</option>
+          <option value="Bike">Bike / Motorcycle (Compact Priority)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="newModel">Make & Model *</label>
+        <input type="text" id="newModel" class="form-control" placeholder="e.g. Tesla Model 3 (Midnight Silver)" required>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+        <input type="checkbox" id="newIsDefault" style="width: 16px; height: 16px;">
+        <label for="newIsDefault" style="font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+          Set as my default vehicle for voice booking
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeAddVehicleModal()">Cancel</button>
+      <button type="button" id="btnSaveVehicle" class="btn btn-primary">Save Vehicle</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  loadVehicles();
+});
+
+async function loadVehicles() {
+  try {
+    const res = await fetch("/api/vehicles");
+    const data = await res.json();
+    const container = document.getElementById("vehiclesGrid");
+
+    if (!data.success || data.vehicles.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; background: var(--bg-card); padding: 3rem 1.5rem; border-radius: var(--radius-md); border: 1px dashed var(--border-subtle);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚗</div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.3rem;">No Vehicles in Garage</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">Add your first vehicle to enable intelligent voice parking matching.</p>
+          <button class="btn btn-primary btn-sm" onclick="openAddVehicleModal()">Add First Vehicle</button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = data.vehicles.map(v => {
+      let icon = "🚗";
+      let badgeStyle = "background: rgba(99, 102, 241, 0.2); color: #818cf8;";
+      if (v.vehicle_type === 'EV') {
+        icon = "⚡";
+        badgeStyle = "background: rgba(6, 182, 212, 0.2); color: #22d3ee;";
+      } else if (v.vehicle_type === 'Bike') {
+        icon = "🏍️";
+        badgeStyle = "background: rgba(245, 158, 11, 0.2); color: #fbbf24;";
+      } else if (v.vehicle_type === 'SUV') {
+        icon = "🚙";
+        badgeStyle = "background: rgba(168, 85, 247, 0.2); color: #c084fc;";
+      }
+
+      const defaultBadge = v.is_default
+        ? `<span style="font-size: 0.7rem; font-weight: 700; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 2px 8px; border-radius: var(--radius-full);">DEFAULT</span>`
+        : `<button class="btn btn-secondary btn-sm" style="padding: 2px 7px; font-size: 0.72rem;" onclick="setDefaultVehicle(${v.id})">Set Default</button>`;
+
+      return `
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; border-color: ${v.is_default ? 'rgba(99, 102, 241, 0.4)' : 'var(--border-subtle)'};">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+              <span style="font-size: 2rem;">${icon}</span>
+              ${defaultBadge}
+            </div>
+            <div style="font-size: 1.25rem; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 0.2rem;">${v.plate_number}</div>
+            <div style="font-size: 0.9rem; color: var(--text-primary); font-weight: 600;">${v.model}</div>
+            <div style="margin-top: 0.5rem;">
+              <span style="font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-full); ${badgeStyle}">
+                ${v.vehicle_type}
+              </span>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle);">
+            <button class="btn btn-secondary btn-sm" style="color: #f87171;" onclick="deleteVehicle(${v.id}, '${v.plate_number}')">
+              Delete
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (err) {
+    console.error("Error loading vehicles:", err);
+  }
+}
+
+function openAddVehicleModal() {
+  document.getElementById("addVehicleModal").style.display = "flex";
+}
+
+function closeAddVehicleModal() {
+  document.getElementById("addVehicleModal").style.display = "none";
+}
+
+document.getElementById("btnSaveVehicle").addEventListener("click", async () => {
+  const plate = document.getElementById("newPlate").value.trim();
+  const type = document.getElementById("newType").value;
+  const model = document.getElementById("newModel").value.trim();
+  const isDefault = document.getElementById("newIsDefault").checked;
+
+  if (!plate || !model) {
+    alert("Please enter both the license plate number and model.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/vehicles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plate_number: plate,
+        vehicle_type: type,
+        model: model,
+        is_default: isDefault
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      closeAddVehicleModal();
+      document.getElementById("newPlate").value = "";
+      document.getElementById("newModel").value = "";
+      document.getElementById("newIsDefault").checked = false;
+      loadVehicles();
+    } else {
+      alert(`Error: ${data.error || 'Failed to add vehicle'}`);
+    }
+  } catch (err) {
+    alert("Network error: Could not save vehicle.");
+  }
+});
+
+async function setDefaultVehicle(vehicleId) {
+  try {
+    const res = await fetch(`/api/vehicles/${vehicleId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default: true })
+    });
+    if (res.ok) {
+      loadVehicles();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function deleteVehicle(vehicleId, plate) {
+  if (!confirm(`Are you sure you want to delete vehicle ${plate}?`)) return;
+  try {
+    const res = await fetch(`/api/vehicles/${vehicleId}`, {
+      method: "DELETE"
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      loadVehicles();
+    } else {
+      alert(`Cannot delete: ${data.error || 'Failed to delete vehicle'}`);
+    }
+  } catch (err) {
+    alert("Network error: Could not delete vehicle.");
+  }
+}
+</script>
+{% endblock %}

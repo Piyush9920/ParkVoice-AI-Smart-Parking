@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ParkVoice AI - Voice-Controlled Smart Parking{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Chart.js for Admin Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <!-- Navigation Header -->
+  <nav class="navbar">
+    <a href="{{ url_for('index') }}" class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/>
+        </svg>
+      </div>
+      <div>
+        <span>PARKVOICE</span><span style="color: var(--primary);"> AI</span>
+        <span class="brand-badge">A* SEARCH</span>
+      </div>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+      <li><a href="{{ url_for('booking') }}" class="{% if request.endpoint == 'booking' %}active{% endif %}">Booking</a></li>
+      <li><a href="{{ url_for('vehicles') }}" class="{% if request.endpoint == 'vehicles' %}active{% endif %}">Garage</a></li>
+      <li><a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}">History</a></li>
+      <li><a href="{{ url_for('admin_dashboard') }}" class="{% if request.endpoint == 'admin_dashboard' %}active{% endif %}">Admin Mode</a></li>
+    </ul>
+
+    <div class="nav-right">
+      <!-- Voice TTS Sound Toggle -->
+      <button id="voiceTtsToggle" class="btn btn-secondary btn-icon" title="Toggle Voice Response Audio" style="border-radius: 50%;">
+        <svg id="ttsSoundIcon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+      </button>
+
+      {% if session.get('user_id') %}
+        <div class="user-tag">
+          <span class="user-avatar">{{ session.get('user_name', 'U')[0] }}</span>
+          <span>{{ session.get('user_name') }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Sign Out</a>
+      {% elif session.get('is_admin') %}
+        <div class="user-tag" style="border-color: rgba(239, 68, 68, 0.4);">
+          <span class="user-avatar" style="background: var(--status-occupied);">A</span>
+          <span>Admin ({{ session.get('admin_username') }})</span>
+        </div>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-secondary btn-sm">Exit Admin</a>
+      {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">Login</a>
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Register</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Flash Alerts -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="alert-container">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            <span>{{ message }}</span>
+            <button type="button" style="background: none; border: none; color: inherit; cursor: pointer;" onclick="this.parentElement.remove();">&times;</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Main Content Block -->
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1440px; margin: 0 auto; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <strong>PARKVOICE AI</strong> &mdash; Voice-Controlled Smart Parking & Real A* Navigation System
+      </div>
+      <div>
+        College AI Competition Edition &bull; Flask &bull; MySQL &bull; Web Speech API
+      </div>
+    </div>
+  </footer>
+
+  <!-- Core Scripts -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
